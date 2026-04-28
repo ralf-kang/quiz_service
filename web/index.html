@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>모의고사 웹서비스</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header>
+    <button id="nav-toggle" class="nav-toggle" aria-label="사이드바 열기" aria-expanded="false" aria-controls="sidebar">☰</button>
+    <h1>📝 모의고사 웹서비스</h1>
+    <div class="user-bar">
+      <label>사용자 ID
+        <input id="user-id" list="user-id-options" placeholder="ID 입력" autocomplete="off" />
+        <datalist id="user-id-options"></datalist>
+      </label>
+      <div id="known-users-quick" class="quick-users" hidden></div>
+      <button id="login-btn" class="primary">로그인</button>
+      <button id="logout-btn" hidden>로그아웃</button>
+      <span id="login-state" class="hint">미로그인</span>
+      <button id="claude-login" class="claude-btn" title="Anthropic Claude 인증">
+        <span class="claude-icon">🔑</span>
+        <span id="claude-label">Claude 로그인</span>
+      </button>
+      <span class="hint" id="llm-status">LLM 상태 확인 중…</span>
+    </div>
+  </header>
+
+  <div id="sidebar-backdrop" class="sidebar-backdrop" hidden></div>
+  <main>
+    <aside id="sidebar">
+      <section id="gate-1" class="step">
+        <h3><span class="step-num">①</span> 테스트 타입 (분류)</h3>
+        <p class="step-desc">과거에 만든 테스트 타입을 선택하거나 새로 생성하세요.</p>
+        <label>테스트 타입 선택
+          <select id="test-type-select">
+            <option value="" disabled selected>— 선택하세요 —</option>
+            <option value="__new__">＋ 새 테스트 타입 만들기…</option>
+          </select>
+        </label>
+        <div id="test-type-new-row" hidden>
+          <label>새 테스트 타입 이름
+            <input id="test-type-new" placeholder="예: 정보처리기사 / ISMS-P / 쿠버네티스" autocomplete="off" />
+          </label>
+        </div>
+        <button id="select-test-type" class="primary">선택/생성</button>
+        <div id="active-test-type" class="active-pill" hidden></div>
+      </section>
+
+      <section id="gate-2" class="step disabled">
+        <h3><span class="step-num">②</span> 강의노트 (출제 범위)</h3>
+        <p class="step-desc">테스트 타입 안의 모든 노트가 디폴트로 출제 범위에 포함됩니다. 체크 해제로 제외하세요.</p>
+        <div class="doc-checklist-bar">
+          <button id="doc-check-all" class="mini-btn" disabled>전체 체크</button>
+          <button id="doc-uncheck-all" class="mini-btn" disabled>전체 해제</button>
+          <span id="doc-checklist-summary" class="hint" style="margin-left:auto;font-size:11px;color:#6b7280"></span>
+        </div>
+        <div id="doc-checklist" class="doc-checklist">
+          <div class="hint" style="font-size:11px;color:#9ca3af">— 업로드 후 표시됩니다 —</div>
+        </div>
+        <details class="upload-details">
+          <summary>＋ 새 강의노트 업로드 (다중 파일 가능)</summary>
+          <input type="file" id="file" accept=".pdf,.docx,.md,.txt,application/pdf" multiple disabled />
+          <button id="upload-btn" disabled>업로드</button>
+          <div id="upload-progress" class="hint" style="font-size:11px;color:#2563eb;margin-top:4px" hidden></div>
+        </details>
+      </section>
+
+      <section id="gate-3" class="step disabled">
+        <h3><span class="step-num">③</span> 출제 옵션</h3>
+        <div class="opt-grid">
+          <label class="opt-cell">문항
+            <input type="number" id="n" min="1" max="20" value="5" disabled />
+          </label>
+          <label class="opt-cell">객관식
+            <input type="number" id="mcq" min="0" max="20" value="4" disabled />
+          </label>
+          <label class="opt-cell">주관식
+            <input type="number" id="short" min="0" max="20" value="1" disabled />
+          </label>
+        </div>
+        <label class="opt-block">난이도
+          <select id="difficulty" disabled>
+            <option value="하">하 — 기본 개념 확인 위주</option>
+            <option value="중" selected>중 — 표준 응시 난이도</option>
+            <option value="상">상 — 50문장+ 지문 · 단순 암기로 풀 수 없음</option>
+            <option value="최상">최상 — 70문장+ 지문 · 다단계 추론</option>
+          </select>
+          <span class="hint" id="difficulty-hint" style="font-size:11px;color:#6b7280;display:block;margin-top:2px"></span>
+        </label>
+
+        <label class="opt-block">스타일 (다중 선택)
+          <div id="style-chips" class="style-chips"></div>
+          <div class="custom-style-row">
+            <select id="style-custom-saved" disabled>
+              <option value="" disabled selected>＋ 저장된 사용자 정의 스타일…</option>
+            </select>
+            <input id="style-custom" type="text" placeholder="새 스타일 입력 후 Enter" disabled />
+          </div>
+          <input type="hidden" id="style" value="기출" />
+        </label>
+
+        <details class="opt-extra">
+          <summary>추가 지시 (선택)</summary>
+          <textarea id="extra" placeholder="예: 사례형 문제 위주, 보안 영역 가중" disabled></textarea>
+        </details>
+
+        <button id="generate-btn" class="primary" disabled>출제하기</button>
+      </section>
+
+      <section>
+        <h3>📂 테스트 히스토리</h3>
+        <div class="history-toolbar">
+          <input id="history-search" type="search" placeholder="🔍 메모/날짜/점수로 필터" autocomplete="off" />
+          <button id="refresh-tree" class="mini-btn" title="새로고침">↻</button>
+        </div>
+        <div id="history-recent" class="history-recent"></div>
+        <div id="history-groups" class="history-groups"></div>
+      </section>
+
+      <section>
+        <h3>⚠️ 약점 노트</h3>
+        <div id="wrong-summary" class="wrong-summary"></div>
+        <div class="wrong-toolbar">
+          <button id="wrong-sort-recent" class="seg-btn active" data-sort="recent">최근 오답</button>
+          <button id="wrong-sort-mastery" class="seg-btn" data-sort="mastery">마스터리 낮은 순</button>
+        </div>
+        <button id="practice-btn" disabled>약점 강화 학습 (3문항)</button>
+        <button id="reset-user" class="danger" disabled>현재 사용자 데이터 전체 삭제</button>
+        <div id="topics"></div>
+        <div id="wrong-list" class="wrong-cards"></div>
+      </section>
+    </aside>
+
+    <article id="board">
+      <!-- 우측 상단 대시보드 — 위젯 그리드 -->
+      <section class="dashboard" id="dashboard">
+        <div class="dashboard-header">
+          <strong>📊 대시보드</strong>
+          <span class="hint" id="dashboard-hint">로그인 후 학습 현황이 표시됩니다.</span>
+          <button id="refresh-dashboard" class="mini">↻</button>
+        </div>
+        <div id="widget-grid" class="widget-grid">
+          <!-- W1 총 세션 -->
+          <div class="widget" id="w-sessions">
+            <div class="widget-head">세션</div>
+            <div class="widget-big" id="w-sessions-big">—</div>
+            <div class="widget-sub" id="w-sessions-sub">로그인 필요</div>
+            <div class="sparkline" id="w-sessions-spark"></div>
+          </div>
+          <!-- W2 평균 점수 -->
+          <div class="widget" id="w-score">
+            <div class="widget-head">정답률</div>
+            <div class="widget-big" id="w-score-big">—</div>
+            <div class="widget-sub" id="w-score-sub">직전 세션 대비 변화</div>
+          </div>
+          <!-- W3 마스터리 진척 -->
+          <div class="widget" id="w-mastery">
+            <div class="widget-head">마스터리</div>
+            <div class="stack-bar" id="w-mastery-bar"></div>
+            <div class="widget-sub" id="w-mastery-sub">5단계 분포</div>
+          </div>
+          <!-- W4 약점 Top3 -->
+          <div class="widget" id="w-weak">
+            <div class="widget-head">약점 TOP 3</div>
+            <ol class="widget-list" id="w-weak-list"><li class="widget-empty">데이터 없음</li></ol>
+          </div>
+          <!-- W5 범위 커버리지 -->
+          <div class="widget" id="w-coverage">
+            <div class="widget-head">범위 커버리지</div>
+            <div class="donut-wrap">
+              <svg id="w-coverage-donut" viewBox="0 0 60 60" width="80" height="80" aria-label="coverage">
+                <circle cx="30" cy="30" r="24" fill="none" stroke="#e5e7eb" stroke-width="8"/>
+                <circle id="w-coverage-arc" cx="30" cy="30" r="24" fill="none" stroke="#2563eb" stroke-width="8"
+                        stroke-dasharray="0 999" stroke-linecap="round" transform="rotate(-90 30 30)"/>
+                <text id="w-coverage-text" x="30" y="34" text-anchor="middle" font-size="11" fill="#1f2937">—</text>
+              </svg>
+              <div class="widget-sub" id="w-coverage-sub">테스트 타입 선택</div>
+            </div>
+          </div>
+          <!-- W6 최근 활동 -->
+          <div class="widget" id="w-recent">
+            <div class="widget-head">최근 활동</div>
+            <div class="mini-line" id="w-recent-line"></div>
+            <div class="widget-sub" id="w-recent-sub">최근 5세션 점수</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 시험 범위 분석 -->
+      <section class="dashboard" id="scope-dashboard" hidden>
+        <div class="dashboard-header">
+          <strong>📚 시험 범위 분석</strong>
+          <span class="hint" id="scope-summary"></span>
+          <button id="refresh-scope" class="mini" title="시험 범위·노트 토픽 재분석 (LLM 호출)">🔄</button>
+        </div>
+        <div id="scope-grid" class="scope-grid"></div>
+      </section>
+
+      <div class="empty" id="board-empty">
+        ① 로그인 → ② 테스트 타입 선택 → ③ 강의노트 업로드 → 출제하기 순서로 진행하세요.
+      </div>
+      <div id="session-banner" class="session-banner" hidden></div>
+      <div id="questions"></div>
+    </article>
+  </main>
+
+  <!-- Claude 인증 모달 -->
+  <div id="auth-modal" class="modal" hidden>
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-card" role="dialog" aria-labelledby="auth-modal-title">
+      <h2 id="auth-modal-title">🔑 Claude 인증</h2>
+      <p class="modal-desc">
+        두 가지 방식 중 하나를 사용할 수 있습니다. 토큰은 <strong>서버 메모리</strong> 에만
+        보관되며 디스크/DB 에 저장되지 않습니다.
+      </p>
+      <ol class="modal-desc tiny">
+        <li><strong>① 자동 로그인</strong> — 로컬 PC 의 Claude Code CLI 자격 자동 채택.</li>
+        <li><strong>② 수동 입력</strong> — <code>sk-ant-api03-…</code> (API Key) 또는
+          <code>sk-ant-oat01-…</code> (Pro/Max OAuth, <code>claude setup-token</code>) 붙여넣기.</li>
+      </ol>
+
+      <div class="modal-actions" style="justify-content:flex-start; margin-top:8px;">
+        <button id="auth-auto" class="primary">🚀 자동 로그인 시도</button>
+      </div>
+
+      <label>토큰 직접 입력 (API Key 또는 OAuth Token)
+        <input type="password" id="api-key" placeholder="sk-ant-api03-… 또는 sk-ant-oat01-…" autocomplete="off" />
+      </label>
+
+      <div class="modal-actions">
+        <button id="auth-cancel" data-close>취소</button>
+        <button id="auth-submit" class="primary">등록</button>
+        <button id="auth-logout" class="danger" hidden>로그아웃(메모리 비움)</button>
+      </div>
+      <div id="auth-error" class="auth-error" hidden></div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
