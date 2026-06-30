@@ -1,4 +1,5 @@
 import logging
+import os
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -117,6 +118,14 @@ def _stop_auto_gen_scheduler() -> None:
         except Exception as e:  # noqa: BLE001
             logger.warning("auto_gen: scheduler shutdown error: %s", e)
         _scheduler = None
+
+
+@app.get("/api/version")
+def api_version():
+    return {
+        "version": os.environ.get("APP_VERSION", "dev"),
+        "updated": os.environ.get("APP_UPDATED", ""),
+    }
 
 
 @app.get("/health")

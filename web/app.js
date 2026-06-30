@@ -1861,3 +1861,13 @@ function escapeHTML(s) {
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
 }
+
+// === 배포 버전 위젯 ===
+(function initAppVersion() {
+  fetch("/api/version").then(r => r.json()).then(v => {
+    const el = document.getElementById("app-version");
+    if (!el) return;
+    const d = (v.updated || "").slice(0, 10);
+    el.textContent = "v" + (v.version || "dev") + (d ? " · " + d : "");
+  }).catch(() => {});
+}());

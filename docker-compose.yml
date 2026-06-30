@@ -19,6 +19,8 @@ services:
       DATABASE_URL: postgresql+psycopg2://webservice_user:webservice_pass@db:5432/webservice_db
       CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN:-}
       AUTO_GEN_ENABLED: "true"
+      APP_VERSION: ${APP_VERSION:-dev}
+      APP_UPDATED: ${APP_UPDATED:-}
     ports:
       - "3501:8000"
     depends_on:
