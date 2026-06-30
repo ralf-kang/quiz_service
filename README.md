@@ -217,6 +217,12 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 ---
 
+## 운영 포트
+
+운영 포트: .20 배포 시 외부 `3501`(compose `ports: 3501:8000`). .20 웹서비스 대역 3501–3999 규약(kang-util CLAUDE.md §11).
+
+---
+
 ## 라이선스
 
 MIT
