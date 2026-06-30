@@ -55,6 +55,10 @@ def clear_token() -> None:
 def get_token() -> Optional[str]:
     if _token:
         return _token
+    # CLAUDE_CODE_OAUTH_TOKEN (구독 토큰) — SDK가 아닌 CLI 패스스루 경로에서 사용됨
+    oauth_env = os.environ.get("CLAUDE_CODE_OAUTH_TOKEN", "").strip()
+    if oauth_env:
+        return oauth_env
     from ..config import settings
 
     if settings.ANTHROPIC_API_KEY:
@@ -70,11 +74,16 @@ def status() -> dict:
     src = _source
     kind = _token_kind
     if not _token:
-        from ..config import settings
-
-        if settings.ANTHROPIC_API_KEY:
+        oauth_env = os.environ.get("CLAUDE_CODE_OAUTH_TOKEN", "").strip()
+        if oauth_env:
             src = "env"
-            kind = _classify(settings.ANTHROPIC_API_KEY)
+            kind = _classify(oauth_env)
+        else:
+            from ..config import settings
+
+            if settings.ANTHROPIC_API_KEY:
+                src = "env"
+                kind = _classify(settings.ANTHROPIC_API_KEY)
     return {
         "configured": is_configured(),
         "source": src,            # 어떻게 등록되었는지 (절대 토큰 자체는 노출 X)

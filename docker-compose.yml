@@ -17,7 +17,8 @@ services:
     build: .
     environment:
       DATABASE_URL: postgresql+psycopg2://webservice_user:webservice_pass@db:5432/webservice_db
-      AUTO_GEN_ENABLED: "false"
+      CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN:-}
+      AUTO_GEN_ENABLED: "true"
     ports:
       - "8000:8000"
     depends_on:
