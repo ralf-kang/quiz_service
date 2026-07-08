@@ -22,3 +22,6 @@ Thumbs.db
 
 # Offline install output (large binary wheels)
 offline_install_x64/
+
+# CI/CD 게이트 테스트 산출물 (run-tests.sh 가 생성, 커밋 금지)
+.cicd-test-report.json
