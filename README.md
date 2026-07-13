@@ -30,6 +30,7 @@ quiz_service/
 │   ├── routers/              # auth · upload · quiz · wrong · admin
 │   ├── services/             # auth · extractor · llm · retriever · quiz_gen
 │   │                         # grader · mastery · verifier · scope_analyzer
+│   │                         # auto_gen · explain_summarizer
 │   ├── prompts/              # generate.txt · grade.txt
 │   │   └── style_packs/      # 시험별 기출 스타일 팩 (정보처리기사·ISMS-P·정보보안기사·default)
 │   └── exam_scope/           # 시험 범위 시드 마크다운
