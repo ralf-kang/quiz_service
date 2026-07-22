@@ -15,6 +15,11 @@ services:
       retries: 12
   app:
     build: .
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     environment:
       DATABASE_URL: postgresql+psycopg2://webservice_user:webservice_pass@db:5432/webservice_db
       CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN:-}
