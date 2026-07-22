@@ -20,12 +20,39 @@ services:
       options:
         max-size: "10m"
         max-file: "5"
+    # 웹서비스 로그 NAS 영구보존(.20 전용, WEBSVC-LOGS.md/kang-util CLAUDE.md §13). quiz_service는
+    # .20에만 배포되므로(REGISTRY.md) 마운트 경로를 직접 고정한다. 이 이미지는 Dockerfile에 USER
+    # 지정이 없어 기본 root로 뜬다 — root는 CAP_DAC_OVERRIDE로 CIFS forceuid=1000(ai) 마운트라도
+    # 권한 비트와 무관하게 쓰기 가능함을 실측 확인했다(financial-dashboard/vistor-report처럼 uid를
+    # 맞춰줄 필요 없음).
+    volumes:
+      - /mnt/synology/claude/logs/webservices/server1:/var/log/webservice
     environment:
       DATABASE_URL: postgresql+psycopg2://webservice_user:webservice_pass@db:5432/webservice_db
       CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN:-}
       AUTO_GEN_ENABLED: "true"
       APP_VERSION: ${APP_VERSION:-dev}
       APP_UPDATED: ${APP_UPDATED:-}
+    command:
+      - sh
+      - -c
+      - |
+        # 원래 CMD(Dockerfile)는 uvicorn 직접 실행. stdout은 그대로 `docker logs`에 나가면서
+        # 동시에 tee로 NAS 로그 파일에도 append된다. 마운트 디렉터리가 쓰기 불가능한 예외
+        # 상황(권한 오류 등)이면 tee 없이 평범하게 기동해 컨테이너가 죽지 않는다(방어적 폴백).
+        # 주의(2026-07-22 수정): `exec uvicorn ... | tee ...` 형태의 파이프라인은 `exec`이
+        # 좌변 서브셸만 uvicorn으로 바꿀 뿐 PID 1은 여전히 sh라서 docker stop/compose down의
+        # SIGTERM이 앱에 전달되지 않아(→ graceful shutdown 실패 → SIGKILL → tee 버퍼 유실)
+        # 로그 유실 문제가 재발했다. FIFO로 uvicorn을 PID 1로 유지하면서 tee는 백그라운드에서
+        # fifo를 읽어 stdout(docker logs)과 파일에 동시에 쓰게 한다. mkfifo 앞 존재 체크는
+        # 컨테이너가 재사용될 때도 멱등하게 만들기 위함.
+        if [ -w /var/log/webservice ]; then
+          [ -p /tmp/logpipe ] || mkfifo /tmp/logpipe
+          tee -a /var/log/webservice/quiz_service-3501.log < /tmp/logpipe &
+          exec uvicorn app.main:app --host 0.0.0.0 --port 8000 > /tmp/logpipe 2>&1
+        else
+          exec uvicorn app.main:app --host 0.0.0.0 --port 8000
+        fi
     ports:
       - "3501:8000"
     depends_on:
