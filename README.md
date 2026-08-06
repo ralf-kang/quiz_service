@@ -30,6 +30,7 @@ quiz_service/
 │   ├── routers/              # auth · upload · quiz · wrong · admin
 │   ├── services/             # auth · extractor · llm · retriever · quiz_gen
 │   │                         # grader · mastery · verifier · scope_analyzer
+│   │                         # auto_gen · explain_summarizer
 │   ├── prompts/              # generate.txt · grade.txt
 │   │   └── style_packs/      # 시험별 기출 스타일 팩 (정보처리기사·ISMS-P·정보보안기사·default)
 │   └── exam_scope/           # 시험 범위 시드 마크다운
@@ -214,6 +215,12 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 | AI | Anthropic Claude API (claude-sonnet-4-6 기본) |
 | Frontend | Vanilla JS, HTML5, CSS3 (단일 페이지) |
 | 문서 추출 | pdfplumber, pypdf, python-docx |
+
+---
+
+## 운영 포트
+
+운영 포트: .20 배포 시 외부 `3501`(compose `ports: 3501:8000`). .20 웹서비스 대역 3501–3999 규약(kang-util CLAUDE.md §11).
 
 ---
 

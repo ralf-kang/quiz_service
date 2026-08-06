@@ -1,0 +1,4 @@
+# CI/CD 게이트 전용 테스트 의존성 (프로덕션 이미지에는 포함하지 않음)
+pytest>=8.0
+pytest-json-report>=1.5
+httpx>=0.27
