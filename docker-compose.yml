@@ -1,6 +1,12 @@
 services:
   db:
     image: postgres:16
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     environment:
       POSTGRES_USER: webservice_user
       POSTGRES_PASSWORD: webservice_pass
@@ -15,6 +21,7 @@ services:
       retries: 12
   app:
     build: .
+    restart: unless-stopped
     logging:
       driver: json-file
       options:
